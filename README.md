@@ -7,15 +7,15 @@ Term: Fall 2019
 + Team 1
 + Projec title: Lorem ipsum dolor sit amet
 + Team members
-	+ 1. Cao, Rui rc3208@columbia.edu
+	+ Cao, Rui rc3208@columbia.edu
 
-	+ 2. Ponkshe, Tushar tvp2110@columbia.edu
+	+ Ponkshe, Tushar tvp2110@columbia.edu
 
-	+ 3. Qiu, Feng fq2150@columbia.edu
+	+ Qiu, Feng fq2150@columbia.edu
 
- 	+ 4. Yao, Nichole yy2860@columbia.edu
+ 	+ Yao, Nichole yy2860@columbia.edu
 
-	+ 5. Ye, Xuanhong xy2387@columbia.edu
+	+ Ye, Xuanhong xy2387@columbia.edu
 	
 + Project summary: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 	
