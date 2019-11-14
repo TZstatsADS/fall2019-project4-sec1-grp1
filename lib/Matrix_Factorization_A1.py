@@ -2,6 +2,8 @@ import random
 import pandas as pd
 import numpy as np
 from Evaluation import RMSE
+from collections import Counter
+from sklearn.metrics.pairwise import pairwise_distances
 
 #Define a function to calculate RMSE
 class Matrix_Factorization:
@@ -13,18 +15,9 @@ class Matrix_Factorization:
             self._u = len(self._data['userId'].unique())
             self._i = len(self._data['movieId'].unique())
 
-
-
-    def bais(self):
-        self._user_mean = self._data.groupby('userId').mean()['rating']
-        self._item_mean = self._data.groupby('movieId').mean()['rating']
-        self._total_mean = np.mean(self._data['rating'])
-        self._user_bias = pd.DataFrame(self._user_mean-total_mean)
-        self._item_bias = pd.DataFrame(self._item_mean-total_mean)
-
 # Stochastic Gradient Descent
 # a function returns a list containing factorized matrices p and q, training and testing RMSEs.
-    def gradesc(self,f=10,lam=0.3, lrate=0.01, maxiter=10, stopping_deriv=0.01):
+    def gradesc(self,f=10,lam=0.3, batch=50, lrate=0.01, maxiter=10, stopping_deriv=0.01):
         # random assign value to matrix p and q
         user_latent = np.random.randn(f,self._u)
         user_latent = pd.DataFrame(user_latent)
@@ -38,9 +31,9 @@ class Matrix_Factorization:
         sample_index = [index for index in self._train_data.index]
 
         for m in range(maxiter):
-            random.shuffle(sample_index)
+            sample_batch = random.sample(sample_index, batch)
             # loop through each training case and perform update
-            for index in sample_index:
+            for index in sample_batch:
                 u = self._train_data.loc[index]['userId']
                 i = self._train_data.loc[index]['movieId']
                 r_ui = self._train_data.loc[index]['rating']
@@ -56,44 +49,11 @@ class Matrix_Factorization:
 
             self._user_latent = user_latent
             self._item_latent = item_latent
-            print(m, 'user_latent', user_latent)
+        print(m, 'user_latent', user_latent)
 
-        def gradesc(self, f=10, lam=0.3, lrate=0.01, maxiter=10, stopping_deriv=0.01):
-            # random assign value to matrix p and q
-            user_latent = np.random.randn(f, self._u)
-            user_latent = pd.DataFrame(user_latent)
-            user_latent.columns = self._data['userId'].unique().tolist()
 
-            item_latent = np.random.randn(f, self._i)
-            item_latent = pd.DataFrame(item_latent)
-            item_latent.columns = self._data['movieId'].unique().tolist()
 
-            sample_index = [index for index in self._train_data.index]
-
-            for m in range(maxiter):
-                random.shuffle(sample_index)
-                # loop through each training case and perform update
-                for index in sample_index:
-                    u = self._train_data.loc[index]['userId']
-                    i = self._train_data.loc[index]['movieId']
-                    r_ui = self._train_data.loc[index]['rating']
-                    e_ui = r_ui - np.dot(item_latent[[i]].T, user_latent[[u]])
-                    grad_q = np.array(e_ui * user_latent[[u]]) - np.array(lam * item_latent[[i]])
-
-                    if (all(grad > stopping_deriv for grad in grad_q)):
-                        item_latent[[i]] = item_latent[[i]] + lrate * grad_q
-
-                    grad_p = np.array(e_ui * item_latent[[i]]) - np.array(lam * user_latent[[u]])
-                    if (all(grad > stopping_deriv for grad in grad_p)):
-                        user_latent[[u]] = user_latent[[u]] + lrate * grad_p
-
-                self._user_latent = user_latent
-                self._item_latent = item_latent
-                print(m, 'user_latent', user_latent)
-
-        # print the values of training and testing RMSE
-
-    def gradesc_bias(self,f=10,lam=0.3, lrate=0.01, maxiter=10, stopping_deriv=0.01):
+    def gradesc_bias(self,f=10,lam=0.3, batch = 50, lrate=0.01, maxiter=10, stopping_deriv=0.01):
         # random assign value to matrix p and q
         user_latent = np.random.randn(f,self._u)
         user_latent = pd.DataFrame(user_latent)
@@ -112,7 +72,7 @@ class Matrix_Factorization:
         sample_index = [index for index in self._train_data.index]
 
         for m in range(maxiter):
-            random.shuffle(sample_index)
+            random.sample(sample_index, batch)
             # loop through each training case and perform update
             for index in sample_index:
                 u = self._train_data.loc[index]['userId']
@@ -143,7 +103,30 @@ class Matrix_Factorization:
 
             print(m, 'user_latent', user_latent)
 
-    # def gradesc_dynamic(self,f=10,lam=0.3, lrate=0.01, maxiter=10, stopping_deriv=0.01):
+    def gradesc_dynamic(self,f=10,lam=0.3, batch = 50, lrate=0.01, maxiter=10, stopping_deriv=0.01):
+        return
+
+    def calcSimMatrix(self):
+        # similarity bewteen movie i1 and i2
+        matSim = np.zeros((self._i, self._i))
+        for i1 in range(self._i):
+            for i2 in range(i1+1, self._):
+                currentSim = pairwise_distances(self._item_latent[:,i1], self._item_latent[:,i2], metric='cosine')
+                matSim[i1, i2] = currentSim
+                matSim[i2, i1] = currentSim
+        self._sim = matSim
+
+    def KNN(self,k=1,test_point=None):
+        if k is not None:
+            self._k = k
+        # compute distance from test point to all train point
+        all_distance = [pairwise_distances(train_point, test_point, metric='cosine') for train_point in self._user_latent]
+
+        # get nearest k neighbors' index
+        k_neighbors_class = np.argsort(all_distance)[:self._k]
+        # get nearest k neighbors most frequent label
+        # DON'T KNOW WHAT IS THE RETURN
+        return #Counter(self._y_train[k_neighbors_class]).most_common()[0][0]
 
     def predict(self,train_data = None, test_data = None):
 
@@ -157,6 +140,9 @@ class Matrix_Factorization:
         est_rating = pd.DataFrame(est_rating)
         est_rating.index = self._data['movieId'].unique().tolist()
         est_rating.columns = self._data['userId'].unique().tolist()
+
+        # add linear regression???
+
         train_RMSE_cur = RMSE(self._train_data, est_rating)
         train_RMSE.append(train_RMSE_cur)
         print("training RMSE:", train_RMSE_cur)
