@@ -15,6 +15,43 @@ class Matrix_Factorization:
             self._u = len(self._data['userId'].unique())
             self._i = len(self._data['movieId'].unique())
 
+
+# A1
+    def gradesc(self,f=10,lam=0.3, batch=50, lrate=0.01, maxiter=10, stopping_deriv=0.01):
+        # random assign value to matrix p and q
+        user_latent = np.random.randn(f,self._u)
+        user_latent = pd.DataFrame(user_latent)
+        user_latent.columns = self._data['userId'].unique().tolist()
+
+        item_latent = np.random.randn(f,self._i)
+        item_latent = pd.DataFrame(item_latent)
+        item_latent.columns = self._data['movieId'].unique().tolist()
+
+
+        sample_index = [index for index in self._train_data.index]
+
+        for m in range(maxiter):
+            sample_batch = random.sample(sample_index, batch)
+            # loop through each training case and perform update
+            for index in sample_batch:
+                u = self._train_data.loc[index]['userId']
+                i = self._train_data.loc[index]['movieId']
+                r_ui = self._train_data.loc[index]['rating']
+                e_ui = r_ui - np.dot(item_latent[[i]].T, user_latent[[u]])
+                grad_q = np.array(e_ui * user_latent[[u]]) - np.array(lam * item_latent[[i]])
+
+                if (all(grad > stopping_deriv for grad in grad_q)):
+                    item_latent[[i]] = item_latent[[i]] + lrate * grad_q
+
+                grad_p = np.array(e_ui * item_latent[[i]]) - np.array(lam * user_latent[[u]])
+                if (all(grad > stopping_deriv for grad in grad_p)):
+                    user_latent[[u]] = user_latent[[u]] + lrate * grad_p
+
+            self._user_latent = user_latent
+            self._item_latent = item_latent
+        print(m, 'user_latent', user_latent)            
+
+
 # Stochastic Gradient Descent
 # a function returns a list containing factorized matrices p and q, training and testing RMSEs.
     def gradesc(self,f=10,lam=0.3, batch=50, lrate=0.01, maxiter=10, stopping_deriv=0.01):
@@ -117,17 +154,30 @@ class Matrix_Factorization:
         self._sim = matSim
 
     def KNN(self,k=1,test_point=None):
-        if k is not None:
-            self._k = k
+        self._sim = pairwise_distances(self._item_latent.T,metric='cosine')
+        self._sim = pd.DataFrame(self._sim)
+        self._sim.index = self._item_latent.columns
+        self._sim.columns = self._item_latent.columns
+        
+        r_ij = np.dot(self._item_latent.T, self._user_latent)
         # compute distance from test point to all train point
-        all_distance = [pairwise_distances(train_point, test_point, metric='cosine') for train_point in self._user_latent]
-
+        #all_distance = [pairwise_distances(train_point, test_point, metric='cosine') for train_point in self._user_latent]
+    
         # get nearest k neighbors' index
-        k_neighbors_class = np.argsort(all_distance)[:self._k]
+        #k_neighbors_class = np.argsort(all_distance)[:self._k]
+        knn_r_ij = []
+        tmp = test_point['movieId'].unique()
+        for i in range(len(tmp)):
+            k_neighbors_class = np.argsort(self._sim[tmp[i]])[1:1+k]
+            knn_r_ij.append(np.mean(r_ij[k_neighbors_class,:],axis=0))
+        knn_r_ij = pd.DataFrame(knn_r_ij)
+        knn_r_ij.index = self._item_latent.columns
+        knn_r_ij.columns = self._user_latent.columns    
         # get nearest k neighbors most frequent label
         # DON'T KNOW WHAT IS THE RETURN
-        return #Counter(self._y_train[k_neighbors_class]).most_common()[0][0]
-
+        #return #Counter(self._y_train[k_neighbors_class]).most_common()[0][0]
+        return knn_r_ij
+    
     def predict(self,train_data = None, test_data = None):
 
         if train_data is not None and test_data is not None:
