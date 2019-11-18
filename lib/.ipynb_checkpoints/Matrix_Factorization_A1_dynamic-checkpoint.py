@@ -116,10 +116,6 @@ class Matrix_Factorization:
         item_latent = pd.DataFrame(item_latent)
         item_latent.columns = self._data['movieId'].unique().tolist()
 
-        user_mean = self._data.groupby('userId').mean()['rating']
-        self._user_bias = pd.DataFrame(user_mean - total_mean)
-        
-
         ########## bias of item with respect to time #########
 
         # distribute to bins
@@ -129,7 +125,7 @@ class Matrix_Factorization:
         self._data['bin_loc'] = bin_loc
         item_bin_bias = self._data.groupby(['movieId','bin_loc']).mean()['rating']
         # bias: b_i
-        total_mean = np.mean(data['rating'])
+        total_mean = np.mean(self._data['rating'])
         item_mean = self._data.groupby('movieId').mean()['rating']
         item_bias = pd.DataFrame(item_mean - total_mean)
         self._item_bias = pd.DataFrame(item_mean - total_mean)
@@ -142,21 +138,21 @@ class Matrix_Factorization:
         ######################## by spline ###########################
 
         # bias: b_u
-        total_mean = np.mean(data['rating'])
+        total_mean = np.mean(self._data['rating'])
         user_mean = self._data.groupby('userId').mean()['rating']
         user_bias = pd.DataFrame(user_mean - total_mean)
         self._user_bias = pd.DataFrame(user_mean - total_mean)
         # Prep for splines
         user_rating_num = self._data.groupby(['userId','timestamp']).count()
         N_vec = []
-        for user_id in data['userId'].unique():  
+        for user_id in self._data['userId'].unique():  
           N_vec.append(user_rating_num[user_rating_num.index.get_level_values(0)==user_id]['movieId'].sum())
 
         K_vec = np.round(np.power(N_vec,power))
 
         data_sort = self._data[['userId','timestamp','rating']].sort_values(by=['userId','timestamp'])
         new_index = []
-        for user_id in data['userId'].unique():
+        for user_id in self._data['userId'].unique():
           new_index.extend(list(range(1,N_vec[user_id-1]+1)))
         data_sort['old_index'] = data_sort.index
         data_sort.index = new_index
@@ -196,8 +192,8 @@ class Matrix_Factorization:
                 u = self._train_data.loc[index]['userId']
                 u_time = self._train_data.loc[index]['timestamp']
                 i = self._train_data.loc[index]['movieId']
-                i_bin = self._train_data.loc[index]['timestamp']//bin_width
-                bias_u = self._user_time_bias[(self._user_time_bias['userId']==u)&(self._user_time_bias['timestamp']==u_time)]
+                i_bin = (self._train_data.loc[index]['timestamp']-self._data['timestamp'].min())//bin_width
+                bias_u = self._user_time_bias[(self._user_time_bias['userId']==u)&(self._user_time_bias['timestamp']==u_time)]['user_time_bias'].iloc[0]
                 bias_i = self._item_bin_bias[i,i_bin]
                 r_ui = self._train_data.loc[index]['rating']
                 e_ui = r_ui - total_mean-bias_u -bias_i- np.dot(item_latent[[i]].T, user_latent[[u]])
