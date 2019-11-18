@@ -19,11 +19,11 @@ class Matrix_Factorization:
 # a function returns a list containing factorized matrices p and q, training and testing RMSEs.
     def gradesc(self,f=10,lam=0.3, batch=50, lrate=0.01, maxiter=10, stopping_deriv=0.01):
         # random assign value to matrix p and q
-        user_latent = np.random.randn(f,self._u)
+        user_latent = np.random.randn(f,self._u)*0.01
         user_latent = pd.DataFrame(user_latent)
         user_latent.columns = self._data['userId'].unique().tolist()
 
-        item_latent = np.random.randn(f,self._i)
+        item_latent = np.random.randn(f,self._i)*0.01
         item_latent = pd.DataFrame(item_latent)
         item_latent.columns = self._data['movieId'].unique().tolist()
 
@@ -55,11 +55,11 @@ class Matrix_Factorization:
 
     def gradesc_bias(self,f=10,lam=0.3, batch = 50, lrate=0.01, maxiter=10, stopping_deriv=0.01):
         # random assign value to matrix p and q
-        user_latent = np.random.randn(f,self._u)
+        user_latent = np.random.randn(f,self._u)*0.01
         user_latent = pd.DataFrame(user_latent)
         user_latent.columns = self._data['userId'].unique().tolist()
 
-        item_latent = np.random.randn(f,self._i)
+        item_latent = np.random.randn(f,self._i)*0.01
         item_latent = pd.DataFrame(item_latent)
         item_latent.columns = self._data['movieId'].unique().tolist()
 
@@ -106,11 +106,11 @@ class Matrix_Factorization:
 
     def gradesc_dynamic(self,f=10,lam=0.3, batch=50, lrate=0.01, maxiter=10, stopping_deriv=0.01, bin_num=30, gamma=0.03, power=0.25):
         # random assign value to matrix p and q
-        user_latent = np.random.randn(f,self._u)
+        user_latent = np.random.randn(f,self._u)*0.01
         user_latent = pd.DataFrame(user_latent)
         user_latent.columns = self._data['userId'].unique().tolist()
 
-        item_latent = np.random.randn(f,self._i)
+        item_latent = np.random.randn(f,self._i)*0.01
         item_latent = pd.DataFrame(item_latent)
         item_latent.columns = self._data['movieId'].unique().tolist()
 
