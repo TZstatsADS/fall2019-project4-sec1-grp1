@@ -40,11 +40,11 @@ class Matrix_Factorization:
                 e_ui = r_ui - np.dot(item_latent[[i]].T, user_latent[[u]])
                 grad_q = np.array(e_ui * user_latent[[u]]) - np.array(lam * item_latent[[i]])
 
-                if (all(grad > stopping_deriv for grad in grad_q)):
+                if (all(np.abs(grad) > stopping_deriv for grad in grad_q)):
                     item_latent[[i]] = item_latent[[i]] + lrate * grad_q
 
                 grad_p = np.array(e_ui * item_latent[[i]]) - np.array(lam * user_latent[[u]])
-                if (all(grad > stopping_deriv for grad in grad_p)):
+                if (all(np.abs(grad) > stopping_deriv for grad in grad_p)):
                     user_latent[[u]] = user_latent[[u]] + lrate * grad_p
 
             self._user_latent = user_latent
@@ -72,9 +72,9 @@ class Matrix_Factorization:
         sample_index = [index for index in self._train_data.index]
 
         for m in range(maxiter):
-            random.sample(sample_index, batch)
+            sample_batch = random.sample(sample_index, batch)
             # loop through each training case and perform update
-            for index in sample_index:
+            for index in sample_batch:
                 u = self._train_data.loc[index]['userId']
                 i = self._train_data.loc[index]['movieId']
                 bias_u = self._user_bias.loc[u]['rating']
@@ -83,19 +83,19 @@ class Matrix_Factorization:
                 e_ui = r_ui - total_mean-bias_u -bias_i- np.dot(item_latent[[i]].T, user_latent[[u]])
 
                 grad_user_latent = np.array(e_ui * user_latent[[u]]) - np.array(lam * item_latent[[i]])
-                if (all(grad > stopping_deriv for grad in grad_user_latent)):
+                if (all(np.abs(grad) > stopping_deriv for grad in grad_user_latent)):
                     item_latent[[i]] = item_latent[[i]] + lrate * grad_user_latent
 
                 grad_item_latent = np.array(e_ui * item_latent[[i]]) - np.array(lam * user_latent[[u]])
-                if (all(grad > stopping_deriv for grad in grad_item_latent)):
+                if (all(np.abs(grad) > stopping_deriv for grad in grad_item_latent)):
                     user_latent[[u]] = user_latent[[u]] + lrate * grad_item_latent
 
                 grad_user_bias = e_ui - lam*bias_u
-                if (all(grad > stopping_deriv for grad in grad_user_bias)):
+                if (all(np.abs(grad) > stopping_deriv for grad in grad_user_bias)):
                     self._user_bias.loc[u]['rating'] = bias_u + lrate * grad_user_bias
 
                 grad_item_bias = e_ui - lam * bias_i
-                if (all(grad > stopping_deriv for grad in grad_item_bias)):
+                if (all(np.abs(grad) > stopping_deriv for grad in grad_item_bias)):
                     self._item_bias.loc[i]['rating'] = bias_u + lrate * grad_item_bias
 
             self._user_latent = user_latent
@@ -103,8 +103,6 @@ class Matrix_Factorization:
 
             print(m, 'user_latent', user_latent)
 
-#     def gradesc_dynamic(self,f=10,lam=0.3, batch = 50, lrate=0.01, maxiter=10, stopping_deriv=0.01):
-#         return
 
     def gradesc_dynamic(self,f=10,lam=0.3, batch=50, lrate=0.01, maxiter=10, stopping_deriv=0.01, bin_num=30, gamma=0.03, power=0.25):
         # random assign value to matrix p and q
@@ -186,9 +184,9 @@ class Matrix_Factorization:
         sample_index = [index for index in self._train_data.index]
 
         for m in range(maxiter):
-            random.sample(sample_index, batch)
+            sample_batch = random.sample(sample_index, batch)
             # loop through each training case and perform update
-            for index in sample_index:
+            for index in sample_batch:
                 u = self._train_data.loc[index]['userId']
                 u_time = self._train_data.loc[index]['timestamp']
                 i = self._train_data.loc[index]['movieId']
@@ -199,19 +197,19 @@ class Matrix_Factorization:
                 e_ui = r_ui - total_mean-bias_u -bias_i- np.dot(item_latent[[i]].T, user_latent[[u]])
 
                 grad_user_latent = np.array(e_ui * user_latent[[u]]) - np.array(lam * item_latent[[i]])
-                if (all(grad > stopping_deriv for grad in grad_user_latent)):
+                if (all(np.abs(grad) > stopping_deriv for grad in grad_user_latent)):
                     item_latent[[i]] = item_latent[[i]] + lrate * grad_user_latent
 
                 grad_item_latent = np.array(e_ui * item_latent[[i]]) - np.array(lam * user_latent[[u]])
-                if (all(grad > stopping_deriv for grad in grad_item_latent)):
+                if (all(np.abs(grad) > stopping_deriv for grad in grad_item_latent)):
                     user_latent[[u]] = user_latent[[u]] + lrate * grad_item_latent
 
                 grad_user_bias = e_ui - lam*bias_u
-                if (all(grad > stopping_deriv for grad in grad_user_bias)):
+                if (all(np.abs(grad) > stopping_deriv for grad in grad_user_bias)):
                     self._user_bias.loc[u]['rating'] = bias_u + lrate * grad_user_bias
 
                 grad_item_bias = e_ui - lam * bias_i
-                if (all(grad > stopping_deriv for grad in grad_item_bias)):
+                if (all(np.abs(grad) > stopping_deriv for grad in grad_item_bias)):
                     self._item_bias.loc[i]['rating'] = bias_u + lrate * grad_item_bias
 
             self._user_latent = user_latent
