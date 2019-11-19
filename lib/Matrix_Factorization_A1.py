@@ -19,39 +19,45 @@ class Matrix_Factorization:
 
 # Stochastic Gradient Descent
 # a function returns a list containing factorized matrices p and q, training and testing RMSEs.
-    def gradesc(self,f=10,lam=0.3, batch=50, lrate=0.01, maxiter=10, stopping_deriv=0.01):
+    def gradesc(self,f=10,lam=0.3, batch=50, lrate=0.01, epoch=10, stopping_deriv=0.01):
         # random assign value to matrix p and q
         user_latent = np.random.randn(f,self._u)*0.01
-        user_latent = pd.DataFrame(user_latent)
-        user_latent.columns = self._data['userId'].unique().tolist()
+        #user_latent = pd.DataFrame(user_latent)
+        #user_latent.columns = self._data['userId'].unique().tolist()
 
         item_latent = np.random.randn(f,self._i)*0.01
-        item_latent = pd.DataFrame(item_latent)
-        item_latent.columns = self._data['movieId'].unique().tolist()
+        #item_latent = pd.DataFrame(item_latent)
+        #item_latent.columns = self._data['movieId'].unique().tolist()
+        
+        tmp1 = [i for i in range(self._i)]
+        tmp2 = self._data['movieId'].unique()
+        self._movie_dict = dict(zip(tmp2,tmp1))
+        
+        train_data = np.array(self._train_data)
+        
+        sample_index = [index for index in range(train_data.shape[0])]
 
-
-        sample_index = [index for index in self._train_data.index]
-
-        for m in range(maxiter):
-            sample_batch = random.sample(sample_index, batch)
+        for e in range(epoch):
+            #sample_batch = random.sample(sample_index, batch)
+            random.shuffle(sample_index)
             # loop through each training case and perform update
-            for index in sample_batch:
-                u = self._train_data.loc[index]['userId']
-                i = self._train_data.loc[index]['movieId']
-                r_ui = self._train_data.loc[index]['rating']
-                e_ui = r_ui - np.dot(item_latent[[i]].T, user_latent[[u]])
-                grad_q = np.array(e_ui * user_latent[[u]]) - np.array(lam * item_latent[[i]])
+            for index in sample_index:
+                u = int(self._train_data[index,0])
+                i = int(self._train_data[index,1])
+                r_ui = self._train_data[index,2]
+                e_ui = r_ui - np.dot(item_latent[:,self._movie_dict[i]].T, user_latent[:,u-1])
+                grad_q = e_ui * user_latent[:,u-1] - lam * item_latent[:,self._movie_dict[i]]
 
                 if (all(np.abs(grad) > stopping_deriv for grad in grad_q)):
-                    item_latent[[i]] = item_latent[[i]] + lrate * grad_q
+                    item_latent[:,self._movie_dict[i]] = item_latent[:,self._movie_dict[i]] + lrate * grad_q
 
-                grad_p = np.array(e_ui * item_latent[[i]]) - np.array(lam * user_latent[[u]])
+                grad_p = e_ui * item_latent[:,self._movie_dict[i]] - lam * user_latent[:,u-1]
                 if (all(np.abs(grad) > stopping_deriv for grad in grad_p)):
-                    user_latent[[u]] = user_latent[[u]] + lrate * grad_p
+                    user_latent[:,u-1] = user_latent[:,u-1] + lrate * grad_p
  
             self._user_latent = user_latent
             self._item_latent = item_latent
-        print(m, 'user_latent', user_latent)
+        print(e, 'user_latent', user_latent)
 
 
 
@@ -105,118 +111,8 @@ class Matrix_Factorization:
 
             print(m, 'user_latent', user_latent)
 
-    def gradesc_dynamic(self,f=10,lam=0.3, batch=50, lrate=0.01, maxiter=10, stopping_deriv=0.01, bin_num=30, gamma=0.03, power=0.25):
-        # random assign value to matrix p and q
-        user_latent = np.random.randn(f,self._u)*0.01
-        user_latent = pd.DataFrame(user_latent)
-        user_latent.columns = self._data['userId'].unique().tolist()
-
-        item_latent = np.random.randn(f,self._i)*0.01
-        item_latent = pd.DataFrame(item_latent)
-        item_latent.columns = self._data['movieId'].unique().tolist()
-
-        ########## bias of item with respect to time #########
-
-        # distribute to bins
-        bin_width = (self._data['timestamp'].max()-self._data['timestamp'].min())//bin_num
-        bin_loc = (self._data['timestamp']-self._data['timestamp'].min())//bin_width
-        # adding info to origin dataset
-        self._data['bin_loc'] = bin_loc
-        item_bin_bias = self._data.groupby(['movieId','bin_loc']).mean()['rating']
-        # bias: b_i
-        total_mean = np.mean(self._data['rating'])
-        item_mean = self._data.groupby('movieId').mean()['rating']
-        item_bias = pd.DataFrame(item_mean - total_mean)
-        self._item_bias = pd.DataFrame(item_mean - total_mean)
-        # item dynamic bias: b_i_Bin(t)+b_i
-        for item_id in item_bias.index:
-          item_bin_bias[item_bin_bias.index.get_level_values(0)==item_id] += self._item_bias['rating'][item_id]
-        self._item_bin_bias = item_bin_bias
-
-        ########### bias of user with respect to time ###########
-        ######################## by spline ###########################
-
-        # bias: b_u
-        total_mean = np.mean(self._data['rating'])
-        user_mean = self._data.groupby('userId').mean()['rating']
-        user_bias = pd.DataFrame(user_mean - total_mean)
-        self._user_bias = pd.DataFrame(user_mean - total_mean)
-        # Prep for splines
-        user_rating_num = self._data.groupby(['userId','timestamp']).count()
-        N_vec = []
-        for user_id in self._data['userId'].unique():  
-          N_vec.append(user_rating_num[user_rating_num.index.get_level_values(0)==user_id]['movieId'].sum())
-
-        K_vec = np.round(np.power(N_vec,power))
-
-        data_sort = self._data[['userId','timestamp','rating']].sort_values(by=['userId','timestamp'])
-        new_index = []
-        for user_id in self._data['userId'].unique():
-          new_index.extend(list(range(1,N_vec[user_id-1]+1)))
-        data_sort['old_index'] = data_sort.index
-        data_sort.index = new_index
-
-        step_vec = np.floor(N_vec/K_vec)
-        user_time_bias = pd.Series([])
-
-        for user_id in data_sort['userId'].unique():
-         A = np.linspace(1,K_vec[user_id-1],int(K_vec[user_id-1]))*step_vec[user_id-1]
-         A = A.astype(int).tolist()
-         B = [1]
-         B.extend(A)
-
-         control_time = data_sort[data_sort['userId']==user_id]['timestamp'][B]
-         control_time_bias = data_sort[data_sort['userId']==user_id]['rating'][B] - total_mean
-
-         denom = 0
-         numer = 0
-         for i in range(len(B)):
-           time_dev_abs = np.abs(data_sort[data_sort['userId']==user_id]['timestamp'] - control_time.iloc[i])
-           denom = denom + np.exp(-gamma*time_dev_abs)
-           numer = numer + np.exp(-gamma*time_dev_abs)*control_time_bias.iloc[i]
-         spline_frac = numer/denom
-         time_bias = spline_frac.fillna(0) + user_bias.iloc[user_id-1][0]
-         user_time_bias = user_time_bias.append(time_bias)
-
-        data_sort['user_time_bias'] = user_time_bias.tolist()
-        data_sort.index = data_sort['old_index'].tolist()
-        self._user_time_bias = data_sort.sort_index()[['userId','timestamp','user_time_bias']]
-
-        sample_index = [index for index in self._train_data.index]
-
-        for m in range(maxiter):
-            sample_batch = random.sample(sample_index, batch)
-            # loop through each training case and perform update
-            for index in sample_batch:
-                u = self._train_data.loc[index]['userId']
-                u_time = self._train_data.loc[index]['timestamp']
-                i = self._train_data.loc[index]['movieId']
-                i_bin = (self._train_data.loc[index]['timestamp']-self._data['timestamp'].min())//bin_width
-                bias_u = self._user_time_bias[(self._user_time_bias['userId']==u)&(self._user_time_bias['timestamp']==u_time)]['user_time_bias'].iloc[0]
-                bias_i = self._item_bin_bias[i,i_bin]
-                r_ui = self._train_data.loc[index]['rating']
-                e_ui = r_ui - total_mean-bias_u -bias_i- np.dot(item_latent[[i]].T, user_latent[[u]])
-
-                grad_user_latent = np.array(e_ui * user_latent[[u]]) - np.array(lam * item_latent[[i]])
-                if (all(np.abs(grad) > stopping_deriv for grad in grad_user_latent)):
-                    item_latent[[i]] = item_latent[[i]] + lrate * grad_user_latent
-
-                grad_item_latent = np.array(e_ui * item_latent[[i]]) - np.array(lam * user_latent[[u]])
-                if (all(np.abs(grad) > stopping_deriv for grad in grad_item_latent)):
-                    user_latent[[u]] = user_latent[[u]] + lrate * grad_item_latent
-
-                grad_user_bias = e_ui - lam*bias_u
-                if (all(np.abs(grad) > stopping_deriv for grad in grad_user_bias)):
-                    self._user_bias.loc[u]['rating'] = bias_u + lrate * grad_user_bias
-
-                grad_item_bias = e_ui - lam * bias_i
-                if (all(np.abs(grad) > stopping_deriv for grad in grad_item_bias)):
-                    self._item_bias.loc[i]['rating'] = bias_u + lrate * grad_item_bias
-
-            self._user_latent = user_latent
-            self._item_latent = item_latent
-
-            print(m, 'user_latent', user_latent)
+    def gradesc_dynamic(self,f=10,lam=0.3, batch = 50, lrate=0.01, maxiter=10, stopping_deriv=0.01):
+        return
 
     def calcSimMatrix(self):
         # similarity bewteen movie i1 and i2
@@ -231,8 +127,8 @@ class Matrix_Factorization:
     def KNN(self,k=1,test_point=None):
         self._sim = pairwise_distances(self._item_latent.T,metric='cosine')
         self._sim = pd.DataFrame(self._sim)
-        self._sim.index = self._item_latent.columns
-        self._sim.columns = self._item_latent.columns
+        #self._sim.index = self._item_latent.columns
+        #self._sim.columns = self._item_latent.columns
         
         r_ij = np.dot(self._item_latent.T, self._user_latent)
         # compute distance from test point to all train point
@@ -241,13 +137,13 @@ class Matrix_Factorization:
         # get nearest k neighbors' index
         #k_neighbors_class = np.argsort(all_distance)[:self._k]
         knn_r_ij = []
-        tmp = test_point['movieId'].unique()
-        for i in range(len(tmp)):
-            k_neighbors_class = np.argsort(self._sim[tmp[i]])[1:1+k]
+        tmp = list(test_point['movieId'].unique())
+        for i in tmp:
+            k_neighbors_class = np.argsort(self._sim[self._movie_dict[i]])[1:1+k]
             knn_r_ij.append(np.mean(r_ij[k_neighbors_class,:],axis=0))
         knn_r_ij = pd.DataFrame(knn_r_ij)
-        knn_r_ij.index = self._item_latent.columns
-        knn_r_ij.columns = self._user_latent.columns    
+        knn_r_ij.index = self._data['movieId'].unique().tolist()
+        knn_r_ij.columns = self._data['userId'].unique().tolist() 
         # get nearest k neighbors most frequent label
         # DON'T KNOW WHAT IS THE RETURN
         #return #Counter(self._y_train[k_neighbors_class]).most_common()[0][0]
@@ -267,16 +163,17 @@ class Matrix_Factorization:
             est_rating = self._est_rating
         else:
             est_rating = np.dot(self._item_latent.T, self._user_latent)
-            est_rating = pd.DataFrame(est_rating)
-            est_rating.index = self._data['movieId'].unique().tolist()
-            est_rating.columns = self._data['userId'].unique().tolist()
+            
+        est_rating = pd.DataFrame(est_rating)
+        est_rating.index = self._data['movieId'].unique().tolist()
+        est_rating.columns = self._data['userId'].unique().tolist()
 
         # add linear regression???
 
-        train_RMSE_cur = RMSE(self._train_data, est_rating)
+        train_RMSE_cur = RMSE(np.array(self._train_data), est_rating)
         train_RMSE.append(train_RMSE_cur)
         print("training RMSE:", train_RMSE_cur)
-        test_RMSE_cur = RMSE(self._test_data, est_rating)
+        test_RMSE_cur = RMSE(np.array(self._test_data), est_rating)
         test_RMSE.append(test_RMSE_cur)
         print("test RMSE:", test_RMSE_cur)
 
