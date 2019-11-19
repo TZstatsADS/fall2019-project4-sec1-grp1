@@ -33,9 +33,7 @@ class Matrix_Factorization:
         sample_index = [index for index in self._train_data.index]
 
         for m in range(maxiter):
-            #sample_batch = random.sample(sample_index, batch)
-            sample_batch = sample_index
-            random.shuffle(sample_batch)
+            sample_batch = random.sample(sample_index, batch)
             # loop through each training case and perform update
             for index in sample_batch:
                 u = self._train_data.loc[index]['userId']
