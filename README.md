@@ -17,7 +17,7 @@ Term: Fall 2019
 	
 	+ Ponkshe, Tushar tvp2110@columbia.edu
 	
-+ Project summary: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
++ Project summary: The goal of this project is to evaluate different recommendation approaches. We implemented Matrix Factorization nonprobabilistic algorithm with SGD approach and postprocessing KNN, and three regularizations: penalty magnitudes, bias and intercepts and temporal dymanics. And we applied [MovieLens] datasets (http://movielens.org) For evaluation part, we compared the performance for these different algorithms by RMSE for Movie dataset.
 
 + The report is formed by the Jupyter Notebook in `.ipynb` file: [main.ipynb](doc/main.ipynb).
 
@@ -27,16 +27,18 @@ Term: Fall 2019
 **Contribution statement**: 
 
 + Function Implementation:
-  + Uniform SGD: 
-  + SGD adding bias:
+  + Uniform SGD: Rui Cao
+  + SGD adding bias: Rui Cao 
   + SGD adding temporal dynamics: Qiu, Feng
-  + Postprocessing:
-
+  + Postprocessing: Xuanhong Ye
+  
 + Evaluation:
-  + Parameter Tuning:
-  + Report:
+  + Parameter Tuning: Yao, Nichole
+  + Report: Yao, Nichole
   
 + Presentation: Yao, Nichole
+
++ Github management: Rui Cao, Qiu Feng
 
 Following [suggestions](http://nicercode.github.io/blog/2013-04-05-projects/) by [RICH FITZJOHN](http://nicercode.github.io/about/#Team) (@richfitz). This folder is orgarnized as follows.
 
