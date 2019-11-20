@@ -5,7 +5,7 @@
 Term: Fall 2019
 
 + Team 1
-+ Projec title: Lorem ipsum dolor sit amet
++ Projec title: Collaborative Filitering By Different Regularization
 + Team members
 	+ Cao, Rui rc3208@columbia.edu
 
@@ -17,19 +17,40 @@ Term: Fall 2019
 	
 	+ Ponkshe, Tushar tvp2110@columbia.edu
 	
-+ Project summary: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
++ Project summary: The goal of this project is to evaluate different recommendation approaches. We implemented Matrix Factorization nonprobabilistic algorithm with SGD approach and postprocessing KNN, and three regularizations: penalty magnitudes, bias and intercepts and temporal dymanics. And we applied MovieLens datasets (http://movielens.org). For evaluation part, we compared the performance for these different algorithms by RMSE for Movie dataset.
+
++ The report is formed by the Jupyter Notebook in `.ipynb` file: [main.ipynb](doc/main.ipynb).
+
++ The functions used in the whole report can be find [here](lib/Matrix_Factorization_A1.py).
+
 	
-**Contribution statement**: [default] All team members contributed equally in all stages of this project. All team members approve our work presented in this GitHub repository including this contributions statement. 
+**Contribution statement**: 
+
++ Function Implementation:
+  + Uniform SGD: Rui Cao
+  + SGD adding bias: Rui Cao 
+  + SGD adding temporal dynamics: Qiu, Feng
+  + Postprocessing: Xuanhong Ye
+  
++ Evaluation:
+  + Parameter Tuning: Yao, Nichole
+  + Report: Yao, Nichole
+  
++ Presentation: Yao, Nichole
+
++ Github management: Rui Cao, Qiu Feng
+
+note: Ponkshe Tushar doesn't participate to the project. 
 
 Following [suggestions](http://nicercode.github.io/blog/2013-04-05-projects/) by [RICH FITZJOHN](http://nicercode.github.io/about/#Team) (@richfitz). This folder is orgarnized as follows.
 
 ```
 proj/
-├── lib/
-├── data/
-├── doc/
-├── figs/
-└── output/
+|-- lib/
+|-- data/
+|-- doc/
+|-- figs/
+|-- output/
 ```
 
 Please see each subfolder for a README file.
