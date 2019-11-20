@@ -17,7 +17,7 @@ Term: Fall 2019
 	
 	+ Ponkshe, Tushar tvp2110@columbia.edu
 	
-+ Project summary: The goal of this project is to evaluate different recommendation approaches. We implemented Matrix Factorization nonprobabilistic algorithm with SGD approach and postprocessing KNN, and three regularizations: penalty magnitudes, bias and intercepts and temporal dymanics. And we applied MovieLens datasets (http://movielens.org) For evaluation part, we compared the performance for these different algorithms by RMSE for Movie dataset.
++ Project summary: The goal of this project is to evaluate different recommendation approaches. We implemented Matrix Factorization nonprobabilistic algorithm with SGD approach and postprocessing KNN, and three regularizations: penalty magnitudes, bias and intercepts and temporal dymanics. And we applied MovieLens datasets (http://movielens.org). For evaluation part, we compared the performance for these different algorithms by RMSE for Movie dataset.
 
 + The report is formed by the Jupyter Notebook in `.ipynb` file: [main.ipynb](doc/main.ipynb).
 
