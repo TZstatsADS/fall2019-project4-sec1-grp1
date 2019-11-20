@@ -141,32 +141,28 @@ class Matrix_Factorization:
         # bias: b_i
         total_mean = np.mean(self._data['rating'])
         item_mean = self._data.groupby('movieId').mean()['rating']
-        item_bias = pd.DataFrame(item_mean - total_mean)
-        for i in self._data['movieId'].unique():
-          item_bin_bias[i] -= item_mean[i] 
-        self._item_bias = pd.DataFrame(item_mean - total_mean)
-        self._item_bin_bias = item_bin_bias - total_mean
-
+        tmp_item_index = item_mean.index.tolist()
+        tmp_movie_dict = dict(zip(tmp_item_index,[i for i in range(self._i)]))
+        item_mean = np.array(item_mean)
+        
         ########### bias of user with respect to time ###########
         ######################## by spline ###########################
-
-        # bias: b_u
-        total_mean = np.mean(self._data['rating'])
-        user_mean = self._data.groupby('userId').mean()['rating']
-        user_bias = pd.DataFrame(user_mean - total_mean)
-        self._user_bias = pd.DataFrame(user_mean - total_mean)
+        for i in self._data['movieId'].unique():
+            item_bin_bias[i,] = list(item_bin_bias[i,] - item_mean[tmp_movie_dict[i]])
+        self._item_bin_bias = item_bin_bias - total_mean
+        
         # Prep for splines
         user_rating_num = self._data.groupby(['userId','timestamp']).count()
         N_vec = []
         for user_id in self._data['userId'].unique():  
-          N_vec.append(user_rating_num[user_rating_num.index.get_level_values(0)==user_id]['movieId'].sum())
+            N_vec.append(user_rating_num[user_rating_num.index.get_level_values(0)==user_id]['movieId'].sum())
 
         K_vec = np.round(np.power(N_vec,power))
 
         data_sort = self._data[['userId','timestamp','rating']].sort_values(by=['userId','timestamp'])
         new_index = []
         for user_id in self._data['userId'].unique():
-          new_index.extend(list(range(1,N_vec[user_id-1]+1)))
+            new_index.extend(list(range(1,N_vec[user_id-1]+1)))
         data_sort['old_index'] = data_sort.index
         data_sort.index = new_index
 
@@ -174,29 +170,34 @@ class Matrix_Factorization:
         user_time_bias = pd.Series([])
 
         for user_id in data_sort['userId'].unique():
-         A = np.linspace(1,K_vec[user_id-1],int(K_vec[user_id-1]))*step_vec[user_id-1]
-         A = A.astype(int).tolist()
-         B = [1]
-         B.extend(A)
+            A = np.linspace(1,K_vec[user_id-1],int(K_vec[user_id-1]))*step_vec[user_id-1]
+            A = A.astype(int).tolist()
+            B = [1]
+            B.extend(A)
 
-         control_time = data_sort[data_sort['userId']==user_id]['timestamp'][B]
-         control_time_bias = data_sort[data_sort['userId']==user_id]['rating'][B] - total_mean
+            control_time = data_sort[data_sort['userId']==user_id]['timestamp'][B]
+            control_time_bias = data_sort[data_sort['userId']==user_id]['rating'][B] - total_mean
 
-         denom = 0
-         numer = 0
-         for i in range(len(B)):
-           time_dev_abs = np.abs(data_sort[data_sort['userId']==user_id]['timestamp'] - control_time.iloc[i])
-           denom = denom + np.exp(-gamma*time_dev_abs)
-           numer = numer + np.exp(-gamma*time_dev_abs)*control_time_bias.iloc[i]
-         spline_frac = numer/denom
-         time_bias = spline_frac.fillna(0) 
-         user_time_bias = user_time_bias.append(time_bias)
+            denom = 0
+            numer = 0
+            for i in range(len(B)):
+                time_dev_abs = np.abs(data_sort[data_sort['userId']==user_id]['timestamp'] - control_time.iloc[i])
+                denom = denom + np.exp(-gamma*time_dev_abs)
+                numer = numer + np.exp(-gamma*time_dev_abs)*control_time_bias.iloc[i]
+            spline_frac = numer/denom
+            time_bias = spline_frac.fillna(0) 
+            user_time_bias = user_time_bias.append(time_bias)
 
         data_sort['user_time_bias'] = user_time_bias.tolist()
         data_sort.index = data_sort['old_index'].tolist()
         self._user_time_bias = data_sort.sort_index()[['userId','timestamp','user_time_bias']]
         
-        
+        tmp = self._user_time_bias.drop_duplicates()
+        self._user_time_bias = pd.Series(tmp['user_time_bias'].values)
+        tmp.set_index(['userId','timestamp'], inplace=True)
+        self._utb_index = tmp.index.tolist()
+        tmp_utb_dict = dict(zip(self._utb_index,range(len(user_time_bias))))
+
         tmp1 = [i for i in range(self._i)]
         tmp2 = self._data['movieId'].unique()
         self._movie_dict = dict(zip(tmp2,tmp1))
@@ -205,13 +206,7 @@ class Matrix_Factorization:
         
         user_mean = self._data.groupby('userId').mean()['rating']
         user_mean = np.array(user_mean)
-        
-        item_mean = self._data.groupby('movieId').mean()['rating']
-        tmp_item_index = item_mean.index.tolist()
-        tmp_movie_dict = dict(zip(tmp_item_index,[i for i in range(self._i)]))
-        item_mean = np.array(item_mean)
-        
-        total_mean = np.mean(self._data['rating'])
+            
         self._total_mean = total_mean
         self._user_bias = user_mean - total_mean
         self._item_bias = item_mean - total_mean
@@ -225,16 +220,16 @@ class Matrix_Factorization:
                 u = int(train_data[index,0])
                 i = int(train_data[index,1])
                 
-                u_time = train_data[index,3]
+                u_time = int(train_data[index,3])
                 i_time = u_time
-                i_bin = (i_time-train_data[:,3].min())//bin_width
+                i_bin = int((i_time-train_data[:,3].min())//bin_width)
                 
                 r_ui = train_data[index,2]
                 
                 bias_u = self._user_bias[u-1]
                 bias_i = self._item_bias[tmp_movie_dict[i]]
                 
-                bias_u_time = self._user_time_bias[(self._user_time_bias['userId']==u)&(self._user_time_bias['timestamp']==u_time)]['user_time_bias'].iloc[0]
+                bias_u_time = self._user_time_bias[tmp_utb_dict[u,u_time]]
                 bias_i_time = self._item_bin_bias[i,i_bin]
                 
                 e_ui = r_ui - total_mean - bias_u - bias_u_time - bias_i - bias_i_time - np.dot(item_latent[:,self._movie_dict[i]].T, user_latent[:,u-1])
@@ -257,7 +252,7 @@ class Matrix_Factorization:
                     
                 grad_user_time_bias = e_ui - lam * bias_u_time
                 if (np.abs(grad_user_time_bias) > stopping_deriv):
-                    self._user_time_bias[(self._user_time_bias['userId']==u)&(self._user_time_bias['timestamp']==u_time)]['user_time_bias'].replace(bias_u_time, bias_u_time + lrate * grad_user_time_bias)
+                    self._user_time_bias[tmp_utb_dict[u,u_time]] = bias_u_time + lrate * grad_user_time_bias
                     
                 grad_item_time_bias = e_ui - lam*bias_i_time
                 if (np.abs(grad_item_time_bias) > stopping_deriv):
@@ -265,22 +260,12 @@ class Matrix_Factorization:
 
             self._user_latent = user_latent
             self._item_latent = item_latent
+            self._user_time_bias.index = self._utb_index
             
             self._model = 'dynamic'
     
     
     
-    
-    def calcSimMatrix(self):
-        # similarity bewteen movie i1 and i2
-        matSim = np.zeros((self._i, self._i))
-        for i1 in range(self._i):
-            for i2 in range(i1+1, self._):
-                currentSim = pairwise_distances(self._item_latent[:,i1], self._item_latent[:,i2], metric='cosine')
-                matSim[i1, i2] = currentSim
-                matSim[i2, i1] = currentSim
-        self._sim = matSim
-
     def KNN(self,k=1,test_point=None):
         self._sim = pairwise_distances(self._item_latent.T,metric='cosine')
         self._sim = pd.DataFrame(self._sim)
@@ -292,10 +277,19 @@ class Matrix_Factorization:
             r_ij = self._total_mean + self._user_bias + np.dot(self._item_latent.T, self._user_latent)
             r_ij = (r_ij.T + self._item_bias).T
         elif self._model == 'dynamic':
-            user_time_mean = self._user_time_bias.groupby('userId').mean()['user_time_bias'].tolist()
-            item_time_mean = self._item_bin_bias.groupby('movieId').mean()
+            self._user_time_bias.index = self._utb_index
+            user_time_bias = self._user_time_bias.to_frame()
+            user_time_bias['userId'] = [self._utb_index[i][0] for i in range(len(self._utb_index))]
+            user_time_bias['timestamp'] = [self._utb_index[i][1] for i in range(len(self._utb_index))]
+            user_time_bias.columns = ['user_time_bias','userId','timestamp']
+            user_time_mean = user_time_bias.groupby('userId').mean()['user_time_bias'].tolist()
+            
+            item_bin_bias = self._item_bin_bias.to_frame()
+            item_bin_bias['movie'] = [self._item_bin_bias.index[i][0] for i in range(len(self._item_bin_bias.index))]
+            item_time_mean = item_bin_bias.groupby('movie').mean()
+            
             r_ij = self._total_mean + self._user_bias + np.array(user_time_mean) + np.dot(self._item_latent.T, self._user_latent)
-            r_ij = (r_ij.T + self._item_bias +np.array(item_time_mean)).T 
+            r_ij = (r_ij.T + self._item_bias +np.array(item_time_mean).T).T 
         # compute distance from test point to all train point
         #all_distance = [pairwise_distances(train_point, test_point, metric='cosine') for train_point in self._user_latent]
     
