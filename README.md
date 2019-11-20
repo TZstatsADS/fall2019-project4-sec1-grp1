@@ -40,6 +40,8 @@ Term: Fall 2019
 
 + Github management: Rui Cao, Qiu Feng
 
+note: Ponkshe Tushar doesn't participate to the project. 
+
 Following [suggestions](http://nicercode.github.io/blog/2013-04-05-projects/) by [RICH FITZJOHN](http://nicercode.github.io/about/#Team) (@richfitz). This folder is orgarnized as follows.
 
 ```
