@@ -27,9 +27,9 @@ Term: Fall 2019
 **Contribution statement**: 
 
 + Function Implementation:
-  + Uniform SGD: Rui Cao
-  + SGD adding bias: Rui Cao 
-  + SGD adding temporal dynamics: Qiu, Feng
+  + Uniform SGD: Rui Cao, Xuanhong Ye
+  + SGD adding bias: Rui Cao, Xuanhong Ye
+  + SGD adding temporal dynamics: Qiu Feng, Xuanhong Ye
   + Postprocessing: Xuanhong Ye
   
 + Evaluation:
