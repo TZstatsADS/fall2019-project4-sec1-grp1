@@ -19,7 +19,7 @@ class Matrix_Factorization:
 
 # Stochastic Gradient Descent
 # a function returns a list containing factorized matrices p and q, training and testing RMSEs.
-    def gradesc(self,f=10,lam=0.3, batch=50, lrate=0.01, epoch=10, stopping_deriv=0.01):
+    def gradesc(self,f=10,lam=0.3, lrate=0.01, epoch=10, stopping_deriv=0.01):
         # random assign value to matrix p and q
         user_latent = np.random.randn(f,self._u)*0.01
         #user_latent = pd.DataFrame(user_latent)
@@ -42,12 +42,12 @@ class Matrix_Factorization:
             random.shuffle(sample_index)
             # loop through each training case and perform update
             for index in sample_index:
-                u = int(self._train_data[index,0])
-                i = int(self._train_data[index,1])
-                r_ui = self._train_data[index,2]
+                u = int(train_data[index,0])
+                i = int(train_data[index,1])
+                r_ui = train_data[index,2]
                 e_ui = r_ui - np.dot(item_latent[:,self._movie_dict[i]].T, user_latent[:,u-1])
+                
                 grad_q = e_ui * user_latent[:,u-1] - lam * item_latent[:,self._movie_dict[i]]
-
                 if (all(np.abs(grad) > stopping_deriv for grad in grad_q)):
                     item_latent[:,self._movie_dict[i]] = item_latent[:,self._movie_dict[i]] + lrate * grad_q
 
@@ -57,59 +57,75 @@ class Matrix_Factorization:
  
             self._user_latent = user_latent
             self._item_latent = item_latent
-        print(e, 'user_latent', user_latent)
+            self._model = 'basic'
+        print(e+1, 'user_latent', user_latent)
 
 
 
-    def gradesc_bias(self,f=10,lam=0.3, batch = 50, lrate=0.01, maxiter=10, stopping_deriv=0.01):
+    def gradesc_bias(self,f=10,lam=0.3, lrate=0.01, epoch=10, stopping_deriv=0.01):
         # random assign value to matrix p and q
         user_latent = np.random.randn(f,self._u)*0.01
-        user_latent = pd.DataFrame(user_latent)
-        user_latent.columns = self._data['userId'].unique().tolist()
+        #user_latent = pd.DataFrame(user_latent)
+        #user_latent.columns = self._data['userId'].unique().tolist()
 
         item_latent = np.random.randn(f,self._i)*0.01
-        item_latent = pd.DataFrame(item_latent)
-        item_latent.columns = self._data['movieId'].unique().tolist()
-
+        #item_latent = pd.DataFrame(item_latent)
+        #item_latent.columns = self._data['movieId'].unique().tolist()
+        
+        tmp1 = [i for i in range(self._i)]
+        tmp2 = self._data['movieId'].unique()
+        self._movie_dict = dict(zip(tmp2,tmp1))
+        
+        train_data = np.array(self._train_data)
+        
         user_mean = self._data.groupby('userId').mean()['rating']
+        user_mean = np.array(user_mean)
+        
         item_mean = self._data.groupby('movieId').mean()['rating']
+        tmp_item_index = item_mean.index.tolist()
+        tmp_movie_dict = dict(zip(tmp_item_index,[i for i in range(self._i)]))
+        item_mean = np.array(item_mean)
+        
         total_mean = np.mean(self._data['rating'])
-        self._user_bias = pd.DataFrame(user_mean - total_mean)
-        self._item_bias = pd.DataFrame(item_mean - total_mean)
+        self._total_mean = total_mean
+        self._user_bias = user_mean - total_mean
+        self._item_bias = item_mean - total_mean
 
-        sample_index = [index for index in self._train_data.index]
+        sample_index = [index for index in range(train_data.shape[0])]
 
-        for m in range(maxiter):
-            random.sample(sample_index, batch)
+        for e in range(epoch):
+            random.shuffle(sample_index)
             # loop through each training case and perform update
             for index in sample_index:
-                u = self._train_data.loc[index]['userId']
-                i = self._train_data.loc[index]['movieId']
-                bias_u = self._user_bias.loc[u]['rating']
-                bias_i = self._item_bias.loc[i]['rating']
-                r_ui = self._train_data.loc[index]['rating']
-                e_ui = r_ui - total_mean-bias_u -bias_i- np.dot(item_latent[[i]].T, user_latent[[u]])
+                u = int(train_data[index,0])
+                i = int(train_data[index,1])
+                r_ui = train_data[index,2]
+                bias_u = self._user_bias[u-1]
+                bias_i = self._item_bias[tmp_movie_dict[i]]
+                e_ui = r_ui - total_mean - bias_u - bias_i- np.dot(item_latent[:,self._movie_dict[i]].T, user_latent[:,u-1])
 
-                grad_user_latent = np.array(e_ui * user_latent[[u]]) - np.array(lam * item_latent[[i]])
+                grad_user_latent = e_ui * user_latent[:,u-1] - lam * item_latent[:,self._movie_dict[i]]
                 if (all(np.abs(grad) > stopping_deriv for grad in grad_user_latent)):
-                    item_latent[[i]] = item_latent[[i]] + lrate * grad_user_latent
+                    item_latent[:,self._movie_dict[i]] = item_latent[:,self._movie_dict[i]] + lrate * grad_user_latent
 
-                grad_item_latent = np.array(e_ui * item_latent[[i]]) - np.array(lam * user_latent[[u]])
+                grad_item_latent = e_ui * item_latent[:,self._movie_dict[i]] - lam * user_latent[:,u-1]
                 if (all(np.abs(grad) > stopping_deriv for grad in grad_item_latent)):
-                    user_latent[[u]] = user_latent[[u]] + lrate * grad_item_latent
+                    user_latent[:,u-1] = user_latent[:,u-1] + lrate * grad_item_latent
 
-                grad_user_bias = e_ui - lam*bias_u
-                if (all(np.abs(grad) > stopping_deriv for grad in grad_user_bias)):
-                    self._user_bias.loc[u]['rating'] = bias_u + lrate * grad_user_bias
+                grad_user_bias = e_ui - lam * bias_u
+                if (np.abs(grad_user_bias) > stopping_deriv):
+                    self._user_bias[u-1] = bias_u + lrate * grad_user_bias
 
                 grad_item_bias = e_ui - lam * bias_i
-                if (all(np.abs(grad) > stopping_deriv for grad in grad_item_bias)):
-                    self._item_bias.loc[i]['rating'] = bias_u + lrate * grad_item_bias
+                if (np.abs(grad_item_bias) > stopping_deriv):
+                    self._item_bias[tmp_movie_dict[i]] = bias_i + lrate * grad_item_bias
 
+                
             self._user_latent = user_latent
             self._item_latent = item_latent
-
-            print(m, 'user_latent', user_latent)
+            
+            self._model = 'bias'
+            print(e+1, 'user_latent', user_latent)
 
     def gradesc_dynamic(self,f=10,lam=0.3, batch = 50, lrate=0.01, maxiter=10, stopping_deriv=0.01):
         return
@@ -129,8 +145,11 @@ class Matrix_Factorization:
         self._sim = pd.DataFrame(self._sim)
         #self._sim.index = self._item_latent.columns
         #self._sim.columns = self._item_latent.columns
-        
-        r_ij = np.dot(self._item_latent.T, self._user_latent)
+        if self._model == 'basic':
+            r_ij = np.dot(self._item_latent.T, self._user_latent)
+        elif self._model == 'bias':
+            r_ij = self._total_mean + self._user_bias + np.dot(self._item_latent.T, self._user_latent)
+            r_ij = (r_ij.T + self._item_bias).T
         # compute distance from test point to all train point
         #all_distance = [pairwise_distances(train_point, test_point, metric='cosine') for train_point in self._user_latent]
     
@@ -168,8 +187,6 @@ class Matrix_Factorization:
         est_rating.index = self._data['movieId'].unique().tolist()
         est_rating.columns = self._data['userId'].unique().tolist()
 
-        # add linear regression???
-
         train_RMSE_cur = RMSE(np.array(self._train_data), est_rating)
         train_RMSE.append(train_RMSE_cur)
         print("training RMSE:", train_RMSE_cur)
@@ -178,3 +195,4 @@ class Matrix_Factorization:
         print("test RMSE:", test_RMSE_cur)
 
         return [train_RMSE, test_RMSE]
+
