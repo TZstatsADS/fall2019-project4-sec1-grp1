@@ -58,7 +58,6 @@ class Matrix_Factorization:
             self._user_latent = user_latent
             self._item_latent = item_latent
             self._model = 'basic'
-        print(e+1, 'user_latent', user_latent)
 
 
 
@@ -125,7 +124,6 @@ class Matrix_Factorization:
             self._item_latent = item_latent
             
             self._model = 'bias'
-            print(e+1, 'user_latent', user_latent)
 
     def gradesc_dynamic(self,f=10,lam=0.3, batch = 50, lrate=0.01, maxiter=10, stopping_deriv=0.01):
         return
